@@ -29,9 +29,30 @@ data LispVal = Atom String
 parseString :: Parser LispVal
 parseString = do
                 char '"'
-                x <- many (noneOf "\"")
+                x <- many (stringChar)
                 char '"'
                 return $ String x
+
+stringChar :: Parser Char
+stringChar = charLiteral <|> noneOf "\""
+
+charLiteral :: Parser Char
+charLiteral = do
+                escapeChar 
+                x <- escapedChar
+                return x
+
+escapeChar :: Parser Char
+escapeChar = char '\\'
+
+escapedChar :: Parser Char
+escapedChar = char '"' <|> char 'n' <|> char 'r' <|> char 't' <|> escapeChar
+
+parseQuoted :: Parser LispVal
+parseQuoted = do
+                char '\''
+                x <- parseExpr
+                return $ List [Atom "quote", x]
 
 parseAtom :: Parser LispVal
 parseAtom = do 
@@ -52,3 +73,22 @@ parseExpr :: Parser LispVal
 parseExpr = parseAtom
          <|> parseString
          <|> parseNumber
+         <|> parseQuoted
+         <|> parseList
+
+parseList :: Parser LispVal
+parseList = do
+                char '('
+                x <- try properList <|> dottedList
+                char ')'
+                return x
+
+properList :: Parser LispVal
+properList = liftM List $ sepBy parseExpr spaces
+
+dottedList :: Parser LispVal
+dottedList = do
+                head <- endBy parseExpr spaces
+                tail <- char '.' >> spaces >> parseExpr
+                return $ DottedList head tail
+
