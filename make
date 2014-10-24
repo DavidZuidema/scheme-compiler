@@ -1,3 +1,3 @@
 #!/bin/bash
-ghc -package parsec -o simple_parser $1
+ghc -package parsec -o eval parser-evaluator.hs
 ./cleanup
